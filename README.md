@@ -9,8 +9,6 @@ var combine = require('gulp-magix-cmd')
 
 gulp.task('combine', function() {
   gulp.src('./app/*.js')
-    .pipe(combine({
-      base: 'app/'
-    }))
+    .pipe(combine())
 })
 ```
