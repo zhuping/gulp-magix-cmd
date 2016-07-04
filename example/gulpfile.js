@@ -3,8 +3,6 @@ var combine = require('../index')
 
 gulp.task('js', function() {
   gulp.src('./app/*.js')
-    .pipe(combine({
-      base: './app'
-    }))
+    .pipe(combine())
     .pipe(gulp.dest('./dist'))
 })

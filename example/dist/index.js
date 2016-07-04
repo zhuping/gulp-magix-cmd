@@ -1,4 +1,4 @@
-define('app/index', function(require, exports, module){
+define('app/index.js', ['magix'], function(require, exports, module){
 
 var Magix = require('magix')
 

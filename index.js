@@ -12,16 +12,6 @@ var htmlCommentCelanReg = /<!--[\s\S]*?-->/g
 var htmlTagCleanReg = />\s+</g
 var cssCleanReg = /\s*([;\{\}:,])\s*/g
 
-function parsePath(path) {
-  var extname = Path.extname(path)
-
-  return {
-    dirname: Path.dirname(path),
-    basename: Path.basename(path, extname),
-    extname: extname
-  };
-}
-
 function transform(source, from, deps) {
   if (!/define\(.*function\s*\(\s*require\s*(.*)?\)\s*\{/.test(source)) {
     source = defineTmpl.replace('@code', function() {
@@ -56,16 +46,10 @@ function compileView(from, source) {
   })
 }
 
-module.exports = function(options) {
-  options = options || {}
-
-  // if (options.base) {
-  //   options.base = Path.resolve(options.base, '.') + '/';
-  // }
+module.exports = function() {
 
   return through.obj(function(file, enc, cb) {
     var jsStr = file.contents.toString(enc)
-    var parsedPath = parsePath(file.relative)
     var contents = ''
     var deps = []
 
@@ -83,7 +67,9 @@ module.exports = function(options) {
     }
 
     // 包装成cmd规范
-    contents = transform(jsStr, Path.join(options.base, parsedPath.dirname, parsedPath.basename), deps)
+    var cwd = new RegExp(file.cwd + '/')
+    var name = file.path.replace(cwd, '')
+    contents = transform(jsStr, name, deps)
 
     if (contents) {
       file.contents = new Buffer(contents)
