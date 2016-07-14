@@ -1,81 +1,36 @@
 var fs = require('fs')
-var Path = require('path')
 var through = require('through2')
-var gutil = require('gulp-util')
 
-var PluginError = gutil.PluginError
+var combineTool = require('magix-combine');
 
-var fileTmplReg = /\b(\w+)\s*:([\s\S]*?)(['"])@([^'"]+)(?:\3)/g
-var defineTmpl = "define('@name', [@require], function(require, exports, module){\n\n@code\n\n})"
-var depsReg = /(?:var\s+([^=]+)=\s*)?require\(([^\(\)]+)\);?/g
-var htmlCommentCelanReg = /<!--[\s\S]*?-->/g
-var htmlTagCleanReg = />\s+</g
-var cssCleanReg = /\s*([;\{\}:,])\s*/g
+var wrapTMPL = 'define(\'${moduleId}\',[${requires}],function(require,exports,module){\r\n/*${vars}*/\r\n${content}\r\n});';
+var wrapNoDepsTMPL = 'define(\'${moduleId}\',function(require,exports,module){\r\n${content}\r\n});';
 
-function transform(source, from, deps) {
-  if (!/define\(.*function\s*\(\s*require\s*(.*)?\)\s*\{/.test(source)) {
-    source = defineTmpl.replace('@code', function() {
-      return source
-    })
-    .replace('@name', from)
-    .replace('@require', deps)
-
-    return source
+combineTool.config({
+  prefix: 'mx',
+  generateJSFile: function(o) {
+    var tmpl = o.requires.length ? wrapTMPL : wrapNoDepsTMPL;
+    for (var p in o) {
+      var reg = new RegExp('\\$\\{' + p + '\\}', 'g');
+      tmpl = tmpl.replace(reg, (o[p] + '').replace(/\$/g, '$$$$'));
+    }
+    return tmpl;
   }
-}
-
-function compileView(from, source) {
-  return source.replace(fileTmplReg, function(match, key, fill, quote, name) {
-    var head = key + ':',
-      tail = '.html'
-    if (key == 'css') {
-      tail = '.css'
-    }
-    var file = Path.dirname(from) + Path.sep + name + tail
-    var content = name
-    if (fs.existsSync(file)) {
-      content = fs.readFileSync(file) + ''
-      if (key == 'css') {
-        content = content.replace(cssCleanReg, '$1')
-      } else {
-        content = content.replace(htmlCommentCelanReg, '').replace(htmlTagCleanReg, '><')
-      }
-      content = JSON.stringify(content)
-    }
-    return head + fill + content
-  })
-}
-
+});
 module.exports = function() {
-
   return through.obj(function(file, enc, cb) {
-    var jsStr = file.contents.toString(enc)
-    var contents = ''
-    var deps = []
-
-    // 合并html
-    jsStr = compileView(Path.join(file.base, file.relative), jsStr)
-
-    // 提取依赖
-    jsStr = jsStr.replace(depsReg, function(match, key, str) {
-      deps.push(str)
-      return match
+    combineTool.config({
+      tmplFolder: file.cwd
     })
-
-    if (deps.length) {
-      deps = deps.join(',')
+    var jsStr = file.contents.toString(enc)
+    if (/define\(.*function\s*\(\s*require\s*(.*)?\)\s*\{/.test(jsStr)) {
+      cb(null, file)
+    } else {
+      combineTool.processContent(file.path, '', jsStr).then(function(content) {
+        //console.log(c);
+        file.contents = new Buffer(content);
+        cb(null, file);
+      });
     }
-
-    // 包装成cmd规范
-    var cwd = new RegExp(file.cwd + '/')
-    var name = file.path.replace(cwd, '')
-    contents = transform(jsStr, name, deps)
-
-    if (contents) {
-      file.contents = new Buffer(contents)
-    }
-
-    cb(null, file)
-
   })
 }

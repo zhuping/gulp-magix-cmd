@@ -1,6 +1,6 @@
 {
   "name": "gulp-magix-cmd",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "wrap js file to cmd for magix",
   "main": "index.js",
   "scripts": {
@@ -22,8 +22,10 @@
   },
   "homepage": "https://github.com/zhuping/gulp-magix-cmd#readme",
   "devDependencies": {
-    "gulp": "^3.9.1",
-    "gulp-util": "^3.0.7",
+    "gulp": "^3.9.1"
+  },
+  "dependencies": {
+    "magix-combine": "^1.0.13",
     "through2": "^2.0.1"
   }
 }
